@@ -6,11 +6,11 @@ import websockets
 from datetime import datetime, timezone
 from pathlib import Path
 
-# ================== ВЕБХУКИ ==================
-DISCORD_WEBHOOK_PUMP = "https://discord.com/api/webhooks/1562115490921451671/FDaNBBPUcrK9zDp-cbgrPZGYZVVNilJBrO9nddrd8v26DAm7OaqtizrTPAQAUuYCqgiV"
-DISCORD_WEBHOOK_RAYDIUM = "https://discord.com/api/webhooks/1562115335434276967/5Yi-iph0fjiQrLXGhsEhRxlJAdnkeP00zbuIKarMSp4dVW4iAb7x_zfN-gQG2n3bCrHL"
-DISCORD_WEBHOOK_EARLY = "https://discord.com/api/webhooks/1562121419830202489/ZQ79XL36XIT-F7Hjz55jDAagayB2NE1gbAhbeX3sgk9LHU46yhPJPsOoVViV2Dcem4IL"
-DISCORD_WEBHOOK_FUNDING = "https://discord.com/api/webhooks/1562128128648810550/aC6Msmqj2q2kOniT2JDBMjpg-Hg4bQ0f14Ec4CX_m1kMM4MX1yGHpdBhkXuYWUOgtajK"
+# ================== НОВЫЕ ВЕБХУКИ ==================
+DISCORD_WEBHOOK_PUMP = "https://discord.com/api/webhooks/1562822221616128010/vm7-P0NLrxdeIgJsZSbDqSIGtPXfD717_4W9ayd7K44vAhU82vbDvCTfN31tyxo2xhc9"
+DISCORD_WEBHOOK_RAYDIUM = "https://discord.com/api/webhooks/1562822098219700246/G57YE4z4TH9JG0XJ3I4RkMaDanZ1U_eN-rYG6o9sPvxZOS434T49yC9q4NV8jSQecBy3"
+DISCORD_WEBHOOK_EARLY = "https://discord.com/api/webhooks/1562822287395262504/XHtZLH23Vyqf_IQhiXpbG8JDBrLyRwGCVNIwYyZ-qXCSJaTyyULbCyvtCLpjpNtJlByM"
+DISCORD_WEBHOOK_FUNDING = "https://discord.com/api/webhooks/1562822410217066577/wuw5h_QOenA_tJIsR5EN3fyNZ-A5LUSTULBjKbv5P89yX-vvuM2KRRPrEq44N8tNy-lw"
 
 SOLANA_RPC = "https://api.mainnet-beta.solana.com"
 
@@ -18,8 +18,8 @@ SOLANA_RPC = "https://api.mainnet-beta.solana.com"
 RAYDIUM_AMM_V4 = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"
 RAYDIUM_CPMM = "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C"
 METEORA_DLMM = "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo"
-METEORA_DBC = "dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN"          # Dynamic Bonding Curve
-METEORA_DAMM_V2 = "cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG"     # DAMM v2
+METEORA_DBC = "dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN"
+METEORA_DAMM_V2 = "cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG"
 
 TEST_KEYWORDS = [
     "test", "t e s t", "t.e.s.t", "testtoken", "testing", "testrun",
@@ -27,7 +27,7 @@ TEST_KEYWORDS = [
     "sniperbot", "snipebot", "testcoin", "test token"
 ]
 
-BLACKLIST_WORDS = ["fake", "mayhem"]   # не отправлять если есть эти слова
+BLACKLIST_WORDS = ["fake", "mayhem"]
 
 def normalize(text: str) -> str:
     if not text:
@@ -80,7 +80,6 @@ async def get_sol_balance(address: str) -> float:
         return 0.0
 
 async def get_creator_token_count(creator: str) -> int:
-    """Примерное количество созданных токенов (через getSignatures). Ограничиваем запрос."""
     if not creator or creator == "—":
         return 0
     payload = {
@@ -93,9 +92,7 @@ async def get_creator_token_count(creator: str) -> int:
         async with aiohttp.ClientSession() as session:
             async with session.post(SOLANA_RPC, json=payload, timeout=10) as resp:
                 data = await resp.json()
-                sigs = data.get("result") or []
-                # Грубая оценка: если очень много подписей — скорее всего много токенов
-                return len(sigs)
+                return len(data.get("result") or [])
     except:
         return 0
 
@@ -133,7 +130,7 @@ async def pump_monitor():
                     if not mint or not is_test_token(name, symbol):
                         continue
                     if has_blacklist_word(name, symbol):
-                        print(f"[SKIP] {symbol} — blacklist word")
+                        print(f"[SKIP] {symbol} — blacklist")
                         continue
 
                     if creator and creator != "—":
@@ -141,10 +138,9 @@ async def pump_monitor():
                         if bal < 0.1:
                             print(f"[SKIP] {symbol} — only {bal:.3f} SOL")
                             continue
-                        # Фильтр по количеству токенов creator'а
                         tok_count = await get_creator_token_count(creator)
                         if tok_count > 25:
-                            print(f"[SKIP] {symbol} — creator has ~{tok_count} txs (many tokens)")
+                            print(f"[SKIP] {symbol} — creator ~{tok_count} txs")
                             continue
 
                     ts = data.get("timestamp") or data.get("created_timestamp")
@@ -177,7 +173,7 @@ async def pump_monitor():
             print(f"Pump error: {e}")
             await asyncio.sleep(5)
 
-# ================== ON-CHAIN (Raydium + Meteora) ==================
+# ================== ON-CHAIN ==================
 async def get_recent_sigs(program_id: str, limit: int = 10):
     payload = {
         "jsonrpc": "2.0", "id": 1,
@@ -315,7 +311,6 @@ async def funding_monitor():
                 continue
             watched = json.loads(Path("watched_wallets.json").read_text())
             for w in watched:
-                name = w.get("name", "Unknown")
                 address = w.get("address")
                 if not address:
                     continue
@@ -344,10 +339,11 @@ async def funding_monitor():
 
 async def main():
     print("=" * 60)
-    print("🚀 Bot started")
-    print("• Pump TEST (no FAKE / no Mayhem / creator ≤25)")
-    print("• On-chain: Raydium + Meteora DLMM + DBC + DAMM v2")
-    print("• Funding Tracker")
+    print("🚀 Bot started with NEW webhooks")
+    print("• PUMP TEST")
+    print("• RADIUM TEST")
+    print("• RADIUM PROJECT (Early)")
+    print("• CEX Funding")
     print("=" * 60)
     await asyncio.gather(
         pump_monitor(),
